@@ -73,15 +73,15 @@ export default function Navigation() {
             {usuario?.nombre}
           </div>
           <div style={{ fontSize: '0.65rem', color: isInvitado ? 'var(--text-dim)' : 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isInvitado ? 'Invitado' : 'Administrador'}
+            {usuario?.rol === 'admin' ? 'Administrador' : usuario?.rol === 'operador' ? 'Operador' : 'Invitado'}
           </div>
         </div>
       </div>
 
       <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem', paddingLeft: '0.5rem', opacity: 0.7 }}>Menú</p>
 
-      {/* Contactos — solo admin */}
-      {isAdmin && (
+      {/* Contactos — solo admin y operador */}
+      {(isAdmin || usuario?.rol === 'operador') && (
         <Link href="/contactos" className={`nav-link ${pathname.startsWith('/contactos') ? 'active' : ''}`}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -103,6 +103,19 @@ export default function Navigation() {
             <circle cx="12" cy="12" r="3"/>
           </svg>
           Canchas
+        </Link>
+      )}
+
+      {/* Usuarios — solo admin */}
+      {isAdmin && (
+        <Link href="/usuarios" className={`nav-link ${pathname.startsWith('/usuarios') ? 'active' : ''}`}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" y1="8" x2="19" y2="14"/>
+            <line x1="22" y1="11" x2="16" y2="11"/>
+          </svg>
+          Usuarios
         </Link>
       )}
 

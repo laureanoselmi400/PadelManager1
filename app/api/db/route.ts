@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongodb'
-import { Contacto, Cancha, Turno } from '@/lib/models'
+import { Contacto, Cancha, Turno, Usuario } from '@/lib/models'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -182,6 +182,104 @@ export async function POST(request: Request) {
       try {
         await Turno.deleteMany({ _id: { $in: data.ids } })
         return NextResponse.json({ success: true })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+  }
+
+  if (collection === 'usuarios') {
+    if (action === 'getAll') {
+      try {
+        const usuarios = await Usuario.find().select('-password').sort({ createdAt: -1 }).lean()
+        return NextResponse.json(usuarios.map(u => ({
+          id: (u as any)._id.toString(),
+          username: u.username,
+          dni: u.dni,
+          rol: u.rol,
+          createdAt: u.createdAt ? u.createdAt.toISOString() : new Date().toISOString(),
+        })))
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'reset') {
+      try {
+        await Usuario.deleteMany({})
+        const nuevo = await Usuario.create({
+          username: 'Administrador',
+          dni: '00000000',
+          password: 'Admin123',
+          rol: 'admin',
+          createdAt: new Date()
+        })
+        return NextResponse.json({ 
+          success: true, 
+          id: nuevo._id.toString(), 
+          username: nuevo.username, 
+          rol: nuevo.rol 
+        })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'create') {
+      try {
+        const existente = await Usuario.findOne({ dni: data.dni })
+        if (existente) {
+          return NextResponse.json({ error: 'Ya existe un usuario con ese DNI', existe: true, username: existente.username }, { status: 400 })
+        }
+        const nuevo = await Usuario.create({ ...data, createdAt: new Date() })
+        return NextResponse.json({ id: nuevo._id.toString(), username: nuevo.username, rol: nuevo.rol })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'update') {
+      try {
+        if (data.update.dni) {
+          const existente = await Usuario.findOne({ dni: data.update.dni, _id: { $ne: data.id } })
+          if (existente) {
+            return NextResponse.json({ error: 'Ya existe un usuario con ese DNI' }, { status: 400 })
+          }
+        }
+        await Usuario.findByIdAndUpdate(data.id, data.update)
+        return NextResponse.json({ success: true })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'delete') {
+      try {
+        await Usuario.findByIdAndDelete(data.id)
+        return NextResponse.json({ success: true })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'login') {
+      try {
+        const usuario = await Usuario.findOne({ username: data.username, password: data.password })
+        if (!usuario) {
+          return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 })
+        }
+        return NextResponse.json({
+          id: usuario._id.toString(),
+          username: usuario.username,
+          dni: usuario.dni,
+          rol: usuario.rol,
+        })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+    }
+    if (action === 'buscarPorDni') {
+      try {
+        const usuario = await Usuario.findOne({ dni: data.dni }).select('username')
+        if (usuario) {
+          return NextResponse.json({ existe: true, username: usuario.username })
+        }
+        return NextResponse.json({ existe: false })
       } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 })
       }

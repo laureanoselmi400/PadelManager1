@@ -1,4 +1,4 @@
-export type Rol = 'admin' | 'invitado'
+export type Rol = 'admin' | 'operador' | 'invitado'
 
 export interface Usuario {
   id: string
@@ -66,6 +66,11 @@ export function logout(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(SESSION_KEY)
   }
+}
+
+export function setSesion(usuario: Usuario): void {
+  const sesion: Sesion = { usuario, timestamp: Date.now() }
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sesion))
 }
 
 export function isAdmin(usuario: Usuario | null): boolean {

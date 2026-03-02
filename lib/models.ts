@@ -36,9 +36,10 @@ export interface ITurno extends Document {
 }
 
 export interface IUsuario extends Document {
-  email: string
+  username: string
+  dni: string
   password: string
-  nombre: string
+  rol: 'admin' | 'operador' | 'invitado'
   createdAt: Date
 }
 
@@ -50,6 +51,14 @@ const ContactoSchema = new Schema<IContacto>({
   mail: { type: String, required: false },
   categoria: { type: String, required: true },
   sexo: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+})
+
+const UsuarioSchema = new Schema<IUsuario>({
+  username: { type: String, required: true },
+  dni: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  rol: { type: String, required: true, enum: ['admin', 'operador', 'invitado'] },
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -68,13 +77,6 @@ const TurnoSchema = new Schema<ITurno>({
   reservado: { type: Boolean, default: false },
   contactoId: { type: String },
   canchaId: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-})
-
-const UsuarioSchema = new Schema<IUsuario>({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  nombre: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
 })
 
