@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --bg: #080c09;
+  --surface: #0d1610;
+  --surface-solid: #0d1610;
+  --surface2: #111e13;
+  --border: #1f3322;
+  --green: #22c55e;
+  --green-dim: #16a34a;
+  --orange: #f97316;
+  --text: #e8f5e8;
+  --text-dim: #7aa882;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  margin: 0;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.font-display { font-family: var(--font-display); }
+
+/* Fondo negro oscuro limpio */
+.court-bg {
+  background-color: #080c09;
+}
+
+/* ═══════════════════════════════════════════
+   CARDS & SURFACES — más glass-morphism
+═══════════════════════════════════════════ */
+.card {
+  background: rgba(11, 22, 13, 0.82);
+  border: 1px solid rgba(34, 195, 94, 0.18);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.card-hover {
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.card-hover:hover {
+  border-color: rgba(34, 197, 94, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.1);
+}
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════ */
+.btn-primary {
+  background: var(--green);
+  color: #071009;
+  font-weight: 700;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+}
+.btn-primary:hover {
+  background: #16a34a;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  background: rgba(11, 22, 13, 0.6);
+  color: var(--text-dim);
+  font-weight: 500;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  backdrop-filter: blur(8px);
+}
+.btn-secondary:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.btn-danger {
+  background: rgba(11, 22, 13, 0.6);
+  color: #f87171;
+  font-weight: 500;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+}
+.btn-danger:hover { background: rgba(127, 29, 29, 0.3); }
+
+/* ═══════════════════════════════════════════
+   INPUTS
+═══════════════════════════════════════════ */
+.input {
+  background: rgba(8, 18, 10, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  backdrop-filter: blur(8px);
+}
+.input:focus {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+.input::placeholder { color: var(--text-dim); opacity: 0.5; }
+select.input option { background: #0d1a0f; }
+
+/* ═══════════════════════════════════════════
+   BADGES
+═══════════════════════════════════════════ */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.badge-green { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.badge-orange { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
+.badge-gray { background: rgba(138,171,138,0.08); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(2, 8, 3, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: rgba(10, 20, 12, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(34, 197, 94, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+/* ═══════════════════════════════════════════
+   NAV LINKS
+═══════════════════════════════════════════ */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-link:hover {
+  background: rgba(34, 197, 94, 0.07);
+  color: var(--text);
+}
+.nav-link.active {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+  box-shadow: inset 2px 0 0 var(--green);
+}
+
+/* ═══════════════════════════════════════════
+   TURNO SLOTS
+═══════════════════════════════════════════ */
+.turno-slot {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgba(10, 22, 13, 0.7);
+  backdrop-filter: blur(6px);
+}
+.turno-slot:hover {
+  border-color: var(--green-dim);
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.12);
+}
+.turno-slot.reservado {
+  border-color: rgba(249,115,22,0.4);
+  background: rgba(249,115,22,0.07);
+}
+.turno-slot.libre {
+  border-color: rgba(34,197,94,0.22);
+}
+
+/* ═══════════════════════════════════════════
+   FORM LABELS
+═══════════════════════════════════════════ */
+label.form-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
