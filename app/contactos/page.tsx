@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Contacto, getContactos, saveContacto, updateContacto, deleteContacto, Categoria, Sexo } from '@/lib/store'
+import { getContactos, saveContacto, updateContacto, deleteContacto } from '@/lib/store'
+import { Contacto, Categoria, Sexo } from '@/lib/types'
+import { Contacto as ContactoType } from '@/lib/types'
 
 const CATEGORIAS: Categoria[] = ['1era', '2da', '3era', '4ta', '5ta', '6ta', '7ma', '8va']
 const SEXOS: Sexo[] = ['Masculino', 'Femenino']
@@ -27,20 +29,23 @@ const empty = {
 }
 
 export default function ContactosPage() {
-  const [contactos, setContactos] = useState<Contacto[]>([])
+  const [contactos, setContactos] = useState<ContactoType[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState<Contacto | null>(null)
+  const [editing, setEditing] = useState<ContactoType | null>(null)
   const [form, setForm] = useState(empty)
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState<string>('Todas')
   const [filterSexo, setFilterSexo] = useState<string>('Todos')
+  const [error, setError] = useState('')
 
-  useEffect(() => { setContactos(getContactos()) }, [])
+  useEffect(() => { 
+    getContactos().then(setContactos) 
+  }, [])
 
-  const reload = () => setContactos(getContactos())
+  const reload = () => getContactos().then(setContactos)
 
-  const openNew = () => { setEditing(null); setForm(empty); setShowModal(true) }
-  const openEdit = (c: Contacto) => {
+  const openNew = () => { setEditing(null); setForm(empty); setError(''); setShowModal(true) }
+  const openEdit = (c: ContactoType) => {
     setEditing(c)
     setForm({
       nombre: c.nombre,
@@ -51,23 +56,36 @@ export default function ContactosPage() {
       categoria: c.categoria,
       sexo: c.sexo ?? 'Masculino',
     })
+    setError('')
     setShowModal(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    
+    const missingFields: string[] = []
+    if (!form.nombre.trim()) missingFields.push('Nombre')
+    if (!form.apellido.trim()) missingFields.push('Apellido')
+    if (!form.telefono.trim()) missingFields.push('Teléfono')
+    
+    if (missingFields.length > 0) {
+      setError(`Completá los siguientes campos: ${missingFields.join(', ')}`)
+      return
+    }
+
     if (editing) {
-      updateContacto(editing.id, form)
+      await updateContacto(editing.id, form)
     } else {
-      saveContacto(form)
+      await saveContacto(form)
     }
     reload()
     setShowModal(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Eliminar este contacto?')) {
-      deleteContacto(id)
+      await deleteContacto(id)
       reload()
     }
   }
@@ -211,6 +229,18 @@ export default function ContactosPage() {
               {editing ? 'EDITAR CONTACTO' : 'NUEVO CONTACTO'}
             </h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {error && (
+                <div style={{
+                  background: 'rgba(248,113,113,0.1)',
+                  border: '1px solid rgba(248,113,113,0.3)',
+                  borderRadius: '8px',
+                  padding: '0.6rem 0.875rem',
+                  fontSize: '0.8rem',
+                  color: '#f87171',
+                }}>
+                  ⚠️ {error}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label className="form-label">Nombre</label>

@@ -2,11 +2,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/components/AuthProvider'
 import {
-  Turno, Contacto, Cancha,
   getTurnos, saveTurnos, replaceTurnosCancha, updateTurno, deleteTurnos, generateTurnos,
   getContactos, saveContacto, getCanchas,
-  Categoria, Sexo
 } from '@/lib/store'
+import { Turno, Contacto, Cancha, Categoria, Sexo } from '@/lib/types'
 
 const CATEGORIAS: Categoria[] = ['1era', '2da', '3era', '4ta', '5ta', '6ta', '7ma', '8va']
 type View = 'lista' | 'generar'
@@ -40,12 +39,12 @@ export default function AgendaPage() {
   })
   // Dialog reemplazo
   const [showReemplazoModal, setShowReemplazoModal] = useState(false)
-  const [pendingGen, setPendingGen] = useState<{ nuevos: Turno[]; reservadosCount: number } | null>(null)
+  const [pendingGen, setPendingGen] = useState<{ nuevos: Omit<Turno, 'id' | 'createdAt'>[]; reservadosCount: number } | null>(null)
 
-  const reload = () => {
-    setTurnos(getTurnos())
-    setContactos(getContactos())
-    const cs = getCanchas()
+  const reload = async () => {
+    setTurnos(await getTurnos())
+    setContactos(await getContactos())
+    const cs = await getCanchas()
     setCanchas(cs)
     if (!selectedCanchaId && cs.length > 0) setSelectedCanchaId(cs[0].id)
   }
@@ -117,18 +116,18 @@ export default function AgendaPage() {
     setShowReservaModal(true)
   }
 
-  const handleReservar = () => {
+  const handleReservar = async () => {
     if (!turnoModal) return
     let telefono = ''
     if (reservaMode === 'existente') {
       if (!selectedContactoId) return alert('Selecciona un contacto')
-      updateTurno(turnoModal.id, { reservado: true, contactoId: selectedContactoId })
+      await updateTurno(turnoModal.id, { reservado: true, contactoId: selectedContactoId })
       telefono = contactos.find(x => x.id === selectedContactoId)?.telefono ?? ''
     } else {
       if (!nuevoContacto.nombre || !nuevoContacto.apellido || !nuevoContacto.telefono)
         return alert('Completa nombre, apellido y telefono')
-      const nuevo = saveContacto(nuevoContacto)
-      updateTurno(turnoModal.id, { reservado: true, contactoId: nuevo.id })
+      const nuevo = await saveContacto(nuevoContacto)
+      await updateTurno(turnoModal.id, { reservado: true, contactoId: nuevo.id })
       telefono = nuevoContacto.telefono
     }
     reload()
@@ -140,11 +139,11 @@ export default function AgendaPage() {
     }
   }
 
-  const handleLiberarTurno = (turno: Turno) => {
+  const handleLiberarTurno = async (turno: Turno) => {
     if (confirm('Liberar este turno?')) {
       const contacto = getContacto(turno.contactoId)
       const telefono = contacto?.telefono ?? ''
-      updateTurno(turno.id, { reservado: false, contactoId: undefined })
+      await updateTurno(turno.id, { reservado: false, contactoId: undefined })
       reload()
       setShowReservaModal(false)
       if (telefono) {
@@ -156,7 +155,7 @@ export default function AgendaPage() {
   }
 
   // ─── Generar agenda ─────────────────────────────────────────
-  const handleGenerarAgenda = (e: React.FormEvent) => {
+  const handleGenerarAgenda = async (e: React.FormEvent) => {
     e.preventDefault()
     const { canchaId, fechaInicio, fechaFin, horaInicio, horaFin, duracion } = genForm
     if (!canchaId) return alert('Selecciona una cancha')
@@ -164,7 +163,7 @@ export default function AgendaPage() {
     if (fechaInicio < hoy) return alert('La fecha de inicio no puede ser anterior a hoy.')
     if (fechaInicio > fechaFin) return alert('La fecha inicio debe ser anterior a la de fin')
 
-    const nuevos = generateTurnos(canchaId, fechaInicio, fechaFin, horaInicio, horaFin, duracion)
+    const nuevos = await generateTurnos(canchaId, fechaInicio, fechaFin, horaInicio, horaFin, duracion)
     if (nuevos.length === 0) return alert('No se pudieron generar turnos con esos parametros')
 
     // Verificar si ya existe agenda para esta cancha en ese rango
@@ -176,7 +175,7 @@ export default function AgendaPage() {
       return
     }
 
-    saveTurnos(nuevos)
+    await saveTurnos(nuevos)
     reload()
     setView('lista')
     setSelectedCanchaId(canchaId)
@@ -184,9 +183,9 @@ export default function AgendaPage() {
     alert(`Se generaron ${nuevos.length} turnos correctamente`)
   }
 
-  const confirmarReemplazo = (mantenerReservados: boolean) => {
+  const confirmarReemplazo = async (mantenerReservados: boolean) => {
     if (!pendingGen || !genForm.canchaId) return
-    replaceTurnosCancha(genForm.canchaId, pendingGen.nuevos, mantenerReservados)
+    await replaceTurnosCancha(genForm.canchaId, pendingGen.nuevos, mantenerReservados)
     setShowReemplazoModal(false)
     setPendingGen(null)
     reload()
@@ -196,11 +195,11 @@ export default function AgendaPage() {
     alert(`Agenda reemplazada con ${pendingGen.nuevos.length} turnos nuevos${mantenerReservados ? ', conservando reservas existentes' : ''}.`)
   }
 
-  const handleEliminarDia = () => {
+  const handleEliminarDia = async () => {
     const ids = turnosDia.filter(t => !t.reservado).map(t => t.id)
     if (ids.length === 0) return alert('No hay turnos libres para eliminar')
     if (confirm(`Eliminar ${ids.length} turnos libres del ${formatFecha(selectedDate)}?`)) {
-      deleteTurnos(ids)
+      await deleteTurnos(ids)
       reload()
     }
   }

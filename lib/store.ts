@@ -1,168 +1,143 @@
-export type Categoria = '1era' | '2da' | '3era' | '4ta' | '5ta' | '6ta' | '7ma' | '8va'
-export type Sexo = 'Masculino' | 'Femenino'
-export type TipoCancha = 'Indoor' | 'Outdoor'
-export type TipoSuelo = 'Alfombra' | 'Cemento'
-export type TipoParedes = 'Blindex' | 'Cemento'
+import { Categoria, Sexo, TipoCancha, TipoSuelo, TipoParedes, Contacto, Cancha, Turno } from './types'
 
-export interface Contacto {
-  id: string
-  nombre: string
-  apellido: string
-  telefono: string
-  fechaNacimiento: string
-  mail: string
-  categoria: Categoria
-  sexo: Sexo
-  createdAt: string
-}
+const API_URL = '/api/db'
 
-export interface Cancha {
-  id: string
-  numero: number
-  tipo: TipoCancha
-  suelo: TipoSuelo
-  paredes: TipoParedes
-  createdAt: string
-}
-
-export interface Turno {
-  id: string
-  fecha: string
-  horaInicio: string
-  horaFin: string
-  reservado: boolean
-  contactoId?: string
-  canchaId: string
-  createdAt: string
-}
-
-const CONTACTOS_KEY = 'padel_contactos'
-const TURNOS_KEY = 'padel_turnos'
-const CANCHAS_KEY = 'padel_canchas'
-
-// ─── Contactos ──────────────────────────────────────────────
-export function getContactos(): Contacto[] {
-  if (typeof window === 'undefined') return []
-  const data = localStorage.getItem(CONTACTOS_KEY)
-  return data ? JSON.parse(data) : []
-}
-
-export function saveContacto(c: Omit<Contacto, 'id' | 'createdAt'>): Contacto {
-  const contactos = getContactos()
-  const nuevo: Contacto = { ...c, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
-  contactos.push(nuevo)
-  localStorage.setItem(CONTACTOS_KEY, JSON.stringify(contactos))
-  return nuevo
-}
-
-export function updateContacto(id: string, data: Partial<Contacto>): void {
-  const contactos = getContactos()
-  const idx = contactos.findIndex(c => c.id === id)
-  if (idx !== -1) {
-    contactos[idx] = { ...contactos[idx], ...data }
-    localStorage.setItem(CONTACTOS_KEY, JSON.stringify(contactos))
+async function fetchAPI(collection: string, filter?: Record<string, string>) {
+  const params = new URLSearchParams({ collection })
+  if (filter) {
+    Object.entries(filter).forEach(([k, v]) => params.append(k, v))
+  }
+  const res = await fetch(`${API_URL}?${params}`)
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`API error: ${res.status} - ${text}`)
+  }
+  const text = await res.text()
+  if (!text) return []
+  try {
+    return JSON.parse(text)
+  } catch {
+    return []
   }
 }
 
-export function deleteContacto(id: string): void {
-  const contactos = getContactos().filter(c => c.id !== id)
-  localStorage.setItem(CONTACTOS_KEY, JSON.stringify(contactos))
+async function postAPI(action: string, collection: string, data: any) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, collection, data }),
+  })
+  const text = await res.text()
+  if (!text) throw new Error('Empty response from server')
+  let json
+  try {
+    json = JSON.parse(text)
+  } catch {
+    throw new Error(`Invalid JSON: ${text.substring(0, 100)}`)
+  }
+  if (!res.ok) throw new Error(json.error || `API error: ${res.status}`)
+  return json
+}
+
+function generateId() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+}
+
+// ─── Contactos ──────────────────────────────────────────────
+export async function getContactos(): Promise<Contacto[]> {
+  if (typeof window === 'undefined') return []
+  try {
+    return await fetchAPI('contactos')
+  } catch {
+    return []
+  }
+}
+
+export async function saveContacto(c: Omit<Contacto, 'id' | 'createdAt'>): Promise<Contacto> {
+  const result = await postAPI('create', 'contactos', c)
+  return { ...c, id: result.id, createdAt: new Date().toISOString() }
+}
+
+export async function updateContacto(id: string, data: Partial<Contacto>): Promise<void> {
+  await postAPI('update', 'contactos', { id, update: data })
+}
+
+export async function deleteContacto(id: string): Promise<void> {
+  await postAPI('delete', 'contactos', { id })
 }
 
 // ─── Canchas ────────────────────────────────────────────────
-const CANCHAS_DEFAULT: Cancha[] = [
-  { id: 'cancha-1', numero: 1, tipo: 'Indoor', suelo: 'Alfombra', paredes: 'Blindex', createdAt: new Date().toISOString() },
-  { id: 'cancha-2', numero: 2, tipo: 'Indoor', suelo: 'Alfombra', paredes: 'Blindex', createdAt: new Date().toISOString() },
-  { id: 'cancha-3', numero: 3, tipo: 'Indoor', suelo: 'Alfombra', paredes: 'Blindex', createdAt: new Date().toISOString() },
-]
-
-export function getCanchas(): Cancha[] {
+export async function getCanchas(): Promise<Cancha[]> {
   if (typeof window === 'undefined') return []
-  const data = localStorage.getItem(CANCHAS_KEY)
-  if (!data) {
-    localStorage.setItem(CANCHAS_KEY, JSON.stringify(CANCHAS_DEFAULT))
-    return CANCHAS_DEFAULT
+  try {
+    return await fetchAPI('canchas')
+  } catch {
+    return []
   }
-  return JSON.parse(data)
 }
 
-export function saveCancha(c: Omit<Cancha, 'id' | 'createdAt'>): Cancha | { error: string } {
-  const canchas = getCanchas()
-  if (canchas.some(x => x.numero === c.numero)) {
-    return { error: `Ya existe una cancha con el número ${c.numero}` }
+export async function saveCancha(c: Omit<Cancha, 'id' | 'createdAt'>): Promise<Cancha | { error: string }> {
+  try {
+    const result = await postAPI('create', 'canchas', c)
+    return { ...c, id: result.id, createdAt: new Date().toISOString() }
+  } catch (e: any) {
+    return { error: e.message }
   }
-  const nueva: Cancha = { ...c, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
-  canchas.push(nueva)
-  canchas.sort((a, b) => a.numero - b.numero)
-  localStorage.setItem(CANCHAS_KEY, JSON.stringify(canchas))
-  return nueva
 }
 
-export function updateCancha(id: string, data: Partial<Omit<Cancha, 'id' | 'createdAt'>>): { error?: string } {
-  const canchas = getCanchas()
-  const idx = canchas.findIndex(c => c.id === id)
-  if (idx === -1) return { error: 'Cancha no encontrada' }
-  if (data.numero !== undefined && canchas.some(x => x.numero === data.numero && x.id !== id)) {
-    return { error: `Ya existe una cancha con el número ${data.numero}` }
+export async function updateCancha(id: string, data: Partial<Omit<Cancha, 'id' | 'createdAt'>>): Promise<{ error?: string }> {
+  try {
+    await postAPI('update', 'canchas', { id, update: data })
+    return {}
+  } catch (e: any) {
+    return { error: e.message }
   }
-  canchas[idx] = { ...canchas[idx], ...data }
-  canchas.sort((a, b) => a.numero - b.numero)
-  localStorage.setItem(CANCHAS_KEY, JSON.stringify(canchas))
-  return {}
 }
 
-export function deleteCancha(id: string): void {
-  const canchas = getCanchas().filter(c => c.id !== id)
-  localStorage.setItem(CANCHAS_KEY, JSON.stringify(canchas))
+export async function deleteCancha(id: string): Promise<void> {
+  await postAPI('delete', 'canchas', { id })
 }
 
 // ─── Turnos ─────────────────────────────────────────────────
-export function getTurnos(): Turno[] {
+export async function getTurnos(): Promise<Turno[]> {
   if (typeof window === 'undefined') return []
-  const data = localStorage.getItem(TURNOS_KEY)
-  return data ? JSON.parse(data) : []
-}
-
-export function getTurnosByCancha(canchaId: string): Turno[] {
-  return getTurnos().filter(t => t.canchaId === canchaId)
-}
-
-export function saveTurnos(turnos: Turno[]): void {
-  const existentes = getTurnos()
-  const nuevos = [...existentes, ...turnos]
-  localStorage.setItem(TURNOS_KEY, JSON.stringify(nuevos))
-}
-
-export function replaceTurnosCancha(canchaId: string, nuevosTurnos: Turno[], mantenerReservados: boolean): void {
-  const todos = getTurnos()
-  const reservados = mantenerReservados ? todos.filter(t => t.canchaId === canchaId && t.reservado) : []
-  const otros = todos.filter(t => t.canchaId !== canchaId)
-  localStorage.setItem(TURNOS_KEY, JSON.stringify([...otros, ...reservados, ...nuevosTurnos]))
-}
-
-export function updateTurno(id: string, data: Partial<Turno>): void {
-  const turnos = getTurnos()
-  const idx = turnos.findIndex(t => t.id === id)
-  if (idx !== -1) {
-    turnos[idx] = { ...turnos[idx], ...data }
-    localStorage.setItem(TURNOS_KEY, JSON.stringify(turnos))
+  try {
+    return await fetchAPI('turnos')
+  } catch {
+    return []
   }
 }
 
-export function deleteTurnos(ids: string[]): void {
-  const turnos = getTurnos().filter(t => !ids.includes(t.id))
-  localStorage.setItem(TURNOS_KEY, JSON.stringify(turnos))
+export async function getTurnosByCancha(canchaId: string): Promise<Turno[]> {
+  const turnos = await getTurnos()
+  return turnos.filter(t => t.canchaId === canchaId)
 }
 
-export function generateTurnos(
+export async function saveTurnos(turnos: Omit<Turno, 'id' | 'createdAt'>[]): Promise<void> {
+  await postAPI('create', 'turnos', { turnos })
+}
+
+export async function replaceTurnosCancha(canchaId: string, nuevosTurnos: Omit<Turno, 'id' | 'createdAt'>[], mantenerReservados: boolean): Promise<void> {
+  await postAPI('replace', 'turnos', { turnos: nuevosTurnos, canchaId, mantenerReservados })
+}
+
+export async function updateTurno(id: string, data: Partial<Turno>): Promise<void> {
+  await postAPI('update', 'turnos', { id, update: data })
+}
+
+export async function deleteTurnos(ids: string[]): Promise<void> {
+  await postAPI('delete', 'turnos', { ids })
+}
+
+export async function generateTurnos(
   canchaId: string,
   fechaInicio: string,
   fechaFin: string,
   horaInicio: string,
   horaFin: string,
   duracionMinutos: number
-): Turno[] {
-  const turnos: Turno[] = []
+): Promise<Omit<Turno, 'id' | 'createdAt'>[]> {
+  const turnos: Omit<Turno, 'id' | 'createdAt'>[] = []
   const start = new Date(fechaInicio + 'T00:00:00')
   const end = new Date(fechaFin + 'T00:00:00')
 
@@ -177,13 +152,11 @@ export function generateTurnos(
       const totalFin = hh * 60 + mm + duracionMinutos
       const fin = `${String(Math.floor(totalFin / 60)).padStart(2, '0')}:${String(totalFin % 60).padStart(2, '0')}`
       turnos.push({
-        id: crypto.randomUUID(),
         fecha,
         horaInicio: inicio,
         horaFin: fin,
         reservado: false,
         canchaId,
-        createdAt: new Date().toISOString(),
       })
       mm += duracionMinutos
       hh += Math.floor(mm / 60)

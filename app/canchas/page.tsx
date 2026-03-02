@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Cancha, getCanchas, saveCancha, updateCancha, deleteCancha, getTurnosByCancha, TipoCancha, TipoSuelo, TipoParedes } from '@/lib/store'
+import { getCanchas, saveCancha, updateCancha, deleteCancha, getTurnosByCancha } from '@/lib/store'
+import { Cancha, TipoCancha, TipoSuelo, TipoParedes } from '@/lib/types'
 
 const TIPOS_CANCHA: TipoCancha[] = ['Indoor', 'Outdoor']
 const TIPOS_SUELO: TipoSuelo[] = ['Alfombra', 'Cemento']
@@ -19,14 +20,14 @@ export default function CanchasPage() {
   const [error, setError] = useState('')
   const [turnosCounts, setTurnosCounts] = useState<Record<string, { total: number; reservados: number }>>({})
 
-  const reload = () => {
-    const cs = getCanchas()
+  const reload = async () => {
+    const cs = await getCanchas()
     setCanchas(cs)
     const counts: Record<string, { total: number; reservados: number }> = {}
-    cs.forEach(c => {
-      const ts = getTurnosByCancha(c.id)
+    for (const c of cs) {
+      const ts = await getTurnosByCancha(c.id)
       counts[c.id] = { total: ts.length, reservados: ts.filter(t => t.reservado).length }
-    })
+    }
     setTurnosCounts(counts)
   }
 
@@ -40,29 +41,29 @@ export default function CanchasPage() {
     setShowModal(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     const numero = parseInt(form.numero)
     if (isNaN(numero) || numero < 1) { setError('El número de cancha debe ser un entero positivo'); return }
     if (editing) {
-      const result = updateCancha(editing.id, { numero, tipo: form.tipo, suelo: form.suelo, paredes: form.paredes })
+      const result = await updateCancha(editing.id, { numero, tipo: form.tipo, suelo: form.suelo, paredes: form.paredes })
       if (result.error) { setError(result.error); return }
     } else {
-      const result = saveCancha({ numero, tipo: form.tipo, suelo: form.suelo, paredes: form.paredes })
+      const result = await saveCancha({ numero, tipo: form.tipo, suelo: form.suelo, paredes: form.paredes })
       if ('error' in result) { setError(result.error); return }
     }
     reload()
     setShowModal(false)
   }
 
-  const handleDelete = (c: Cancha) => {
+  const handleDelete = async (c: Cancha) => {
     const count = turnosCounts[c.id]
     const msg = count?.total > 0
       ? `La cancha ${c.numero} tiene ${count.total} turnos (${count.reservados} reservados). Al eliminarla se borrarán todos sus turnos. Confirmar?`
       : `Eliminar cancha ${c.numero}?`
     if (confirm(msg)) {
-      deleteCancha(c.id)
+      await deleteCancha(c.id)
       reload()
     }
   }
