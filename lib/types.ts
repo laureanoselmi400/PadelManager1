@@ -33,5 +33,7 @@ export interface Turno {
   reservado: boolean
   contactoId?: string
   canchaId: string
+  semanal?: boolean
+  grupoSemanalId?: string
   createdAt: string
 }

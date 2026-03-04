@@ -55,6 +55,8 @@ export async function GET(request: Request) {
       reservado: t.reservado,
       contactoId: t.contactoId,
       canchaId: t.canchaId,
+      semanal: t.semanal || false,
+      grupoSemanalId: t.grupoSemanalId,
       createdAt: t.createdAt.toISOString(),
     })))
   }

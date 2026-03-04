@@ -32,6 +32,8 @@ export interface ITurno extends Document {
   reservado: boolean
   contactoId?: string
   canchaId: string
+  semanal?: boolean
+  grupoSemanalId?: string
   createdAt: Date
 }
 
@@ -61,12 +63,13 @@ const UsuarioSchema = new Schema<IUsuario>({
   dni: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   telefono: { type: String, required: true },
-  email: { type: String, required: false },
+  email: { type: String, required: false, default: null },
   rol: { type: String, required: true, enum: ['admin', 'operador', 'invitado', 'UsuFinal'] },
   createdAt: { type: Date, default: Date.now },
 })
 
 UsuarioSchema.index({ username: 1 }, { unique: true })
+UsuarioSchema.index({ email: 1 }, { unique: true, sparse: true })
 
 const CanchaSchema = new Schema<ICancha>({
   numero: { type: Number, required: true, unique: true },
@@ -83,6 +86,8 @@ const TurnoSchema = new Schema<ITurno>({
   reservado: { type: Boolean, default: false },
   contactoId: { type: String },
   canchaId: { type: String, required: true },
+  semanal: { type: Boolean, default: false },
+  grupoSemanalId: { type: String },
   createdAt: { type: Date, default: Date.now },
 })
 

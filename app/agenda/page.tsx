@@ -32,6 +32,7 @@ export default function AgendaPage() {
     nombre: '', apellido: '', telefono: '', mail: '',
     fechaNacimiento: '', categoria: '1era' as Categoria, sexo: 'Masculino' as Sexo
   })
+  const [esSemanal, setEsSemanal] = useState(false)
 
   // Generar form
   const [genForm, setGenForm] = useState({
@@ -121,6 +122,7 @@ export default function AgendaPage() {
       return
     }
     setTurnoModal(turno)
+    setEsSemanal(false)
     setReservaMode('existente')
     setSearchContacto('')
     setSelectedContactoId('')
@@ -128,34 +130,82 @@ export default function AgendaPage() {
     setShowReservaModal(true)
   }
 
+  const generarIdSemanal = () => {
+    return 'sw_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
+  }
+
   const handleReservar = async () => {
     if (!turnoModal) return
     let telefono = ''
+    let contactoId = ''
+    
     if (reservaMode === 'existente') {
       if (!selectedContactoId) return alert('Selecciona un contacto')
-      await updateTurno(turnoModal.id, { reservado: true, contactoId: selectedContactoId })
+      contactoId = selectedContactoId
       telefono = contactos.find(x => x.id === selectedContactoId)?.telefono ?? ''
     } else {
       if (!nuevoContacto.nombre || !nuevoContacto.apellido || !nuevoContacto.telefono)
         return alert('Completa nombre, apellido y telefono')
       const nuevo = await saveContacto(nuevoContacto)
-      await updateTurno(turnoModal.id, { reservado: true, contactoId: nuevo.id })
+      contactoId = nuevo.id
       telefono = nuevoContacto.telefono
     }
+
+    const grupoSemanalId = esSemanal ? generarIdSemanal() : undefined
+    const semanas = esSemanal ? 12 : 1
+    const fechaBase = new Date(turnoModal.fecha)
+
+    for (let i = 0; i < semanas; i++) {
+      const fechaStr = fechaBase.toISOString().split('T')[0]
+      const turnoExistente = turnos.find(t => t.fecha === fechaStr && t.horaInicio === turnoModal.horaInicio && t.canchaId === turnoModal.canchaId)
+      
+      if (turnoExistente) {
+        await updateTurno(turnoExistente.id, { 
+          reservado: true, 
+          contactoId, 
+          semanal: esSemanal,
+          grupoSemanalId
+        })
+      }
+      
+      fechaBase.setDate(fechaBase.getDate() + 7)
+    }
+
     reload()
     setShowReservaModal(false)
     if (telefono) {
       const cancha = canchas.find(c => c.id === turnoModal.canchaId)
-      const msg = `Se ha reservado el turno para el ${formatFechaCorta(turnoModal.fecha)} de ${turnoModal.horaInicio} a ${turnoModal.horaFin} hs${cancha ? ` (Cancha ${cancha.numero})` : ''}.`
+      const msg = esSemanal
+        ? `Se han reservado los turnos semanales para el ${formatFechaCorta(turnoModal.fecha)} de ${turnoModal.horaInicio} a ${turnoModal.horaFin} hs${cancha ? ` (Cancha ${cancha.numero})` : ''}.`
+        : `Se ha reservado el turno para el ${formatFechaCorta(turnoModal.fecha)} de ${turnoModal.horaInicio} a ${turnoModal.horaFin} hs${cancha ? ` (Cancha ${cancha.numero})` : ''}.`
       enviarWhatsApp(telefono, msg)
     }
   }
 
   const handleLiberarTurno = async (turno: Turno) => {
+    const esParteSemanal = turno.semanal || turno.grupoSemanalId
+    
+    if (esParteSemanal && turno.grupoSemanalId) {
+      const respuesta = confirm('Este turno forma parte de una serie semanal. ¿Querés liberar solo este turno o todos los turnos de la serie?')
+      if (!respuesta) return
+      
+      const opcion = confirm('Aceptar = Liberar solo este turno\nCancelar = Liberar todos los turnos de la serie')
+      
+      if (!opcion) {
+        const turnosSemanal = turnos.filter(t => t.grupoSemanalId === turno.grupoSemanalId)
+        for (const t of turnosSemanal) {
+          await updateTurno(t.id, { reservado: false, contactoId: undefined, semanal: false, grupoSemanalId: undefined })
+        }
+        reload()
+        setShowReservaModal(false)
+        return
+      }
+    }
+
     if (confirm('Liberar este turno?')) {
       const contacto = getContacto(turno.contactoId)
       const telefono = contacto?.telefono ?? ''
-      await updateTurno(turno.id, { reservado: false, contactoId: undefined })
+      await updateTurno(turno.id, { reservado: false, contactoId: undefined, semanal: false, grupoSemanalId: undefined })
       reload()
       setShowReservaModal(false)
       if (telefono) {
@@ -706,6 +756,31 @@ export default function AgendaPage() {
                     </div>
                   </div>
                 )}
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                  {(isAdmin || usuario?.rol === 'operador') && (
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      cursor: 'pointer',
+                      padding: '0.5rem 0.75rem',
+                      background: esSemanal ? 'rgba(34,197,94,0.1)' : 'var(--surface2)',
+                      border: `1px solid ${esSemanal ? 'var(--green)' : 'var(--border)'}`,
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      color: esSemanal ? 'var(--green)' : 'var(--text-dim)',
+                    }}>
+                      <input 
+                        type="checkbox" 
+                        checked={esSemanal} 
+                        onChange={e => setEsSemanal(e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      🔄 Turno semanal (próximas 12 semanas)
+                    </label>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
                   <button className="btn-primary" style={{ flex: 1 }} onClick={handleReservar}>Confirmar reserva</button>
