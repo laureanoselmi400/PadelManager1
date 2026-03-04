@@ -2,17 +2,22 @@
 import { useState, useEffect } from 'react'
 import { getUsuarios, saveUsuario, updateUsuario, deleteUsuario, Rol, Usuario } from '@/lib/usuarios'
 
-const ROLES: Rol[] = ['admin', 'operador', 'invitado']
+const ROLES: { value: Rol; label: string }[] = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'operador', label: 'Operador' },
+  { value: 'invitado', label: 'Usuario final' },
+]
 
-const ROL_COLORS: Record<Rol, string> = {
+const ROL_COLORS: Record<string, string> = {
   'admin': 'badge-orange',
   'operador': 'badge-green',
   'invitado': 'badge-gray',
+  'UsuFinal': 'badge-gray',
 }
 
-type FormData = { username: string; dni: string; password: string; rol: Rol }
+type FormData = { username: string; dni: string; password: string; telefono: string; email: string; rol: Rol }
 
-const emptyForm: FormData = { username: '', dni: '', password: '', rol: 'invitado' }
+const emptyForm: FormData = { username: '', dni: '', password: '', telefono: '', email: '', rol: 'invitado' }
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -32,7 +37,7 @@ export default function UsuariosPage() {
   const openNew = () => { setEditing(null); setForm(emptyForm); setError(''); setShowModal(true) }
   const openEdit = (u: Usuario) => {
     setEditing(u)
-    setForm({ username: u.username, dni: u.dni, password: '', rol: u.rol })
+    setForm({ username: u.username, dni: u.dni, password: '', telefono: u.telefono || '', email: u.email || '', rol: u.rol })
     setError('')
     setShowModal(true)
   }
@@ -43,13 +48,14 @@ export default function UsuariosPage() {
 
     if (!form.username.trim()) return setError('El username es obligatorio')
     if (!form.dni.trim()) return setError('El DNI es obligatorio')
+    if (!form.telefono.trim()) return setError('El teléfono es obligatorio')
     if (!form.password.trim() && !editing) return setError('La contraseña es obligatoria')
-    if (!ROLES.includes(form.rol)) return setError('El rol es obligatorio')
+    if (!ROLES.some(r => r.value === form.rol)) return setError('El rol es obligatorio')
 
     setLoading(true)
     try {
       if (editing) {
-        const updateData: any = { username: form.username, rol: form.rol }
+        const updateData: any = { username: form.username, telefono: form.telefono, email: form.email, rol: form.rol }
         if (form.password) updateData.password = form.password
         const result = await updateUsuario(editing.id, updateData)
         if (result.error) {
@@ -80,6 +86,11 @@ export default function UsuariosPage() {
     }
   }
 
+  const getRolLabel = (rol: string) => {
+    const r = ROLES.find(r => r.value === rol)
+    return r ? r.label : rol
+  }
+
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
@@ -100,7 +111,7 @@ export default function UsuariosPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Username', 'DNI', 'Rol', 'Creado', ''].map(h => (
+                {['Usuario', 'DNI', 'Teléfono', 'Email', 'Rol', ''].map(h => (
                   <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
@@ -115,11 +126,10 @@ export default function UsuariosPage() {
                 >
                   <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{u.username}</td>
                   <td style={{ padding: '0.75rem 1rem', color: 'var(--text-dim)' }}>{u.dni}</td>
+                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-dim)' }}>{u.telefono || '-'}</td>
+                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-dim)' }}>{u.email || '-'}</td>
                   <td style={{ padding: '0.75rem 1rem' }}>
-                    <span className={`badge ${ROL_COLORS[u.rol]}`}>{u.rol}</span>
-                  </td>
-                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-AR') : '-'}
+                    <span className={`badge ${ROL_COLORS[u.rol]}`}>{getRolLabel(u.rol)}</span>
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -165,6 +175,16 @@ export default function UsuariosPage() {
               </div>
 
               <div>
+                <label className="form-label">Teléfono *</label>
+                <input className="input" required value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} placeholder="+54 9 11 1234-5678" />
+              </div>
+
+              <div>
+                <label className="form-label">Email (opcional)</label>
+                <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@ejemplo.com" />
+              </div>
+
+              <div>
                 <label className="form-label">Contraseña {editing ? '(dejar vacío para mantener)' : '*'}</label>
                 <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editing ? '••••••••' : 'Contraseña'} />
               </div>
@@ -174,26 +194,25 @@ export default function UsuariosPage() {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {ROLES.map(r => (
                     <button
-                      key={r}
+                      key={r.value}
                       type="button"
-                      onClick={() => setForm(f => ({ ...f, rol: r }))}
+                      onClick={() => setForm(f => ({ ...f, rol: r.value }))}
                       style={{
                         flex: 1,
                         padding: '0.5rem',
                         borderRadius: '8px',
                         border: '1px solid',
-                        fontSize: '0.8rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         cursor: 'pointer',
                         fontFamily: 'var(--font-body)',
                         transition: 'all 0.15s',
-                        background: form.rol === r ? 'rgba(34,197,94,0.15)' : 'var(--surface2)',
-                        color: form.rol === r ? 'var(--green)' : 'var(--text-dim)',
-                        borderColor: form.rol === r ? 'rgba(34,197,94,0.4)' : 'var(--border)',
-                        textTransform: 'capitalize',
+                        background: form.rol === r.value ? 'rgba(34,197,94,0.15)' : 'var(--surface2)',
+                        color: form.rol === r.value ? 'var(--green)' : 'var(--text-dim)',
+                        borderColor: form.rol === r.value ? 'rgba(34,197,94,0.4)' : 'var(--border)',
                       }}
                     >
-                      {r}
+                      {r.label}
                     </button>
                   ))}
                 </div>

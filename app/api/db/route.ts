@@ -196,6 +196,8 @@ export async function POST(request: Request) {
           id: (u as any)._id.toString(),
           username: u.username,
           dni: u.dni,
+          telefono: u.telefono,
+          email: u.email,
           rol: u.rol,
           createdAt: u.createdAt ? u.createdAt.toISOString() : new Date().toISOString(),
         })))
@@ -210,6 +212,8 @@ export async function POST(request: Request) {
           username: 'Administrador',
           dni: '00000000',
           password: 'Admin123',
+          telefono: '',
+          email: '',
           rol: 'admin',
           createdAt: new Date()
         })
@@ -225,6 +229,9 @@ export async function POST(request: Request) {
     }
     if (action === 'create') {
       try {
+        if (!data.telefono || !data.telefono.trim()) {
+          return NextResponse.json({ error: 'El teléfono es obligatorio' }, { status: 400 })
+        }
         const existente = await Usuario.findOne({ dni: data.dni })
         if (existente) {
           return NextResponse.json({ error: 'Ya existe un usuario con ese DNI', existe: true, username: existente.username }, { status: 400 })

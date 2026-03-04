@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   
   const [showRegistro, setShowRegistro] = useState(false)
-  const [regForm, setRegForm] = useState({ username: '', dni: '', password: '', rol: 'invitado' as any })
+  const [regForm, setRegForm] = useState({ username: '', dni: '', password: '', telefono: '', email: '', rol: 'UsuFinal' as any })
   const [regError, setRegError] = useState('')
   const [regLoading, setRegLoading] = useState(false)
 
@@ -46,6 +46,7 @@ export default function LoginPage() {
     if (!regForm.username.trim()) return setRegError('El username es obligatorio')
     if (!regForm.dni.trim()) return setRegError('El DNI es obligatorio')
     if (!regForm.password.trim()) return setRegError('La contraseña es obligatoria')
+    if (!regForm.telefono.trim()) return setRegError('El teléfono es obligatorio')
 
     setRegLoading(true)
     
@@ -56,7 +57,7 @@ export default function LoginPage() {
       return
     }
 
-    const result = await saveUsuario(regForm)
+    const result = await saveUsuario({ ...regForm, rol: 'UsuFinal' as any })
     setRegLoading(false)
     
     if ('error' in result) {
@@ -66,7 +67,7 @@ export default function LoginPage() {
 
     setSesion({ id: result.id, username: result.username, rol: result.rol, nombre: result.username })
     setUsuario({ id: result.id, username: result.username, rol: result.rol, nombre: result.username })
-    router.push('/contactos')
+    router.push('/agenda')
   }
 
   return (
@@ -255,6 +256,27 @@ export default function LoginPage() {
                 placeholder="Tu DNI"
                 value={regForm.dni}
                 onChange={e => { setRegForm(f => ({ ...f, dni: e.target.value })); setRegError('') }}
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Teléfono *</label>
+              <input
+                className="input"
+                placeholder="+54 9 11 1234-5678"
+                value={regForm.telefono}
+                onChange={e => { setRegForm(f => ({ ...f, telefono: e.target.value })); setRegError('') }}
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Email (opcional)</label>
+              <input
+                className="input"
+                type="email"
+                placeholder="tu@email.com"
+                value={regForm.email}
+                onChange={e => { setRegForm(f => ({ ...f, email: e.target.value })); setRegError('') }}
               />
             </div>
 

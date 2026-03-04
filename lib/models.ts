@@ -39,7 +39,9 @@ export interface IUsuario extends Document {
   username: string
   dni: string
   password: string
-  rol: 'admin' | 'operador' | 'invitado'
+  telefono: string
+  email?: string
+  rol: 'admin' | 'operador' | 'invitado' | 'UsuFinal'
   createdAt: Date
 }
 
@@ -58,9 +60,13 @@ const UsuarioSchema = new Schema<IUsuario>({
   username: { type: String, required: true },
   dni: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  rol: { type: String, required: true, enum: ['admin', 'operador', 'invitado'] },
+  telefono: { type: String, required: true },
+  email: { type: String, required: false },
+  rol: { type: String, required: true, enum: ['admin', 'operador', 'invitado', 'UsuFinal'] },
   createdAt: { type: Date, default: Date.now },
 })
+
+UsuarioSchema.index({ username: 1 }, { unique: true })
 
 const CanchaSchema = new Schema<ICancha>({
   numero: { type: Number, required: true, unique: true },

@@ -13,6 +13,7 @@ type View = 'lista' | 'generar'
 export default function AgendaPage() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
+  const isUsuFinal = usuario?.rol === 'UsuFinal'
 
   const [view, setView] = useState<View>('lista')
   const [turnos, setTurnos] = useState<Turno[]>([])
@@ -102,10 +103,21 @@ export default function AgendaPage() {
   const hoy = new Date().toISOString().split('T')[0]
   const esFechaPasada = (fecha: string) => fecha < hoy
 
+  // Para UsuFinal, solo mostrar días de hoy en adelante
+  useEffect(() => {
+    if (isUsuFinal && esFechaPasada(selectedDate)) {
+      setSelectedDate(hoy)
+    }
+  }, [selectedDate, isUsuFinal])
+
   // ─── Reserva ────────────────────────────────────────────────
   const openReserva = (turno: Turno) => {
     if (esFechaPasada(turno.fecha)) {
       alert(`No se pueden modificar turnos de fechas pasadas (${formatFechaCorta(turno.fecha)}).`)
+      return
+    }
+    if (turno.reservado) {
+      alert('Este turno ya está reservado.')
       return
     }
     setTurnoModal(turno)
@@ -435,23 +447,25 @@ export default function AgendaPage() {
           {turnosDia.length === 0 ? (
             <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📅</div>
-              <p style={{ color: 'var(--text-dim)', margin: 0 }}>No hay turnos para este dia.</p>
+              <p style={{ color: 'var(--text-dim)', margin: 0 }}>No hay turnos disponibles para este dia.</p>
               {isAdmin && <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                 Usa <strong style={{ color: 'var(--green)' }}>+ Generar agenda</strong> para crear turnos.
               </p>}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
-              {turnosDia.map(turno => {
+              {turnosDia
+                .filter(t => !isUsuFinal || !t.reservado)
+                .map(turno => {
                 const contacto = getContacto(turno.contactoId)
                 const pasado = esFechaPasada(turno.fecha)
                 return (
                   <div
                     key={turno.id}
                     className={`turno-slot ${turno.reservado ? 'reservado' : 'libre'}`}
-                    onClick={() => openReserva(turno)}
+                    onClick={() => !isUsuFinal && openReserva(turno)}
                     style={{
-                      cursor: pasado ? 'default' : 'pointer',
+                      cursor: (pasado || isUsuFinal && turno.reservado) ? 'default' : 'pointer',
                       opacity: pasado ? 0.45 : 1,
                       filter: pasado ? 'grayscale(60%)' : 'none',
                     }}
@@ -460,11 +474,16 @@ export default function AgendaPage() {
                       <span style={{ fontWeight: 700, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>
                         {turno.horaInicio}–{turno.horaFin}
                       </span>
-                      <span className={`badge ${turno.reservado ? 'badge-orange' : 'badge-green'}`}>
-                        {turno.reservado ? 'Reservado' : 'Libre'}
-                      </span>
+                      {!isUsuFinal && (
+                        <span className={`badge ${turno.reservado ? 'badge-orange' : 'badge-green'}`}>
+                          {turno.reservado ? 'Reservado' : 'Libre'}
+                        </span>
+                      )}
+                      {isUsuFinal && (
+                        <span className="badge badge-green">Disponible</span>
+                      )}
                     </div>
-                    {contacto && (
+                    {contacto && !isUsuFinal && (
                       <>
                         <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)' }}>
                           {contacto.nombre} {contacto.apellido}
@@ -546,6 +565,62 @@ export default function AgendaPage() {
             ) : (
               <>
                 <h2 className="font-display" style={{ fontSize: '1.4rem', margin: '0 0 1rem', color: 'var(--text)' }}>RESERVAR TURNO</h2>
+                
+                {isUsuFinal ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', margin: 0 }}>
+                      Ingresá tus datos para reservar el turno:
+                    </p>
+                    <div>
+                      <label className="form-label">Nombre *</label>
+                      <input 
+                        className="input" 
+                        value={nuevoContacto.nombre} 
+                        onChange={e => setNuevoContacto(f => ({ ...f, nombre: e.target.value }))} 
+                        placeholder="Tu nombre" 
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Apellido *</label>
+                      <input 
+                        className="input" 
+                        value={nuevoContacto.apellido} 
+                        onChange={e => setNuevoContacto(f => ({ ...f, apellido: e.target.value }))} 
+                        placeholder="Tu apellido" 
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Teléfono *</label>
+                      <input 
+                        className="input" 
+                        value={nuevoContacto.telefono} 
+                        onChange={e => setNuevoContacto(f => ({ ...f, telefono: e.target.value }))} 
+                        placeholder="+54 9 11 1234-5678" 
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      <button 
+                        className="btn-primary" 
+                        style={{ flex: 1 }} 
+                        onClick={async () => {
+                          if (!nuevoContacto.nombre || !nuevoContacto.apellido || !nuevoContacto.telefono) {
+                            alert('Completá nombre, apellido y teléfono')
+                            return
+                          }
+                          const nuevo = await saveContacto(nuevoContacto)
+                          await updateTurno(turnoModal.id, { reservado: true, contactoId: nuevo.id })
+                          reload()
+                          setShowReservaModal(false)
+                          alert('Turno reservado correctamente!')
+                        }}
+                      >
+                        Confirmar reserva
+                      </button>
+                      <button className="btn-secondary" onClick={() => setShowReservaModal(false)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* Tabs */}
                 <div style={{ display: 'flex', marginBottom: '1.25rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                   {(['existente', 'nuevo'] as const).map(mode => (
@@ -636,6 +711,8 @@ export default function AgendaPage() {
                   <button className="btn-primary" style={{ flex: 1 }} onClick={handleReservar}>Confirmar reserva</button>
                   <button className="btn-secondary" onClick={() => setShowReservaModal(false)}>Cancelar</button>
                 </div>
+                  </>
+                )}
               </>
             )}
           </div>

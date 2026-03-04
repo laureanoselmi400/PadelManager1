@@ -11,6 +11,7 @@ export default function Navigation() {
 
   const isAdmin = usuario?.rol === 'admin'
   const isInvitado = usuario?.rol === 'invitado'
+  const isUsuFinal = usuario?.rol === 'UsuFinal'
 
   const handleLogout = () => {
     logout()
@@ -73,7 +74,7 @@ export default function Navigation() {
             {usuario?.nombre}
           </div>
           <div style={{ fontSize: '0.65rem', color: isInvitado ? 'var(--text-dim)' : 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {usuario?.rol === 'admin' ? 'Administrador' : usuario?.rol === 'operador' ? 'Operador' : 'Invitado'}
+            {usuario?.rol === 'admin' ? 'Administrador' : usuario?.rol === 'operador' ? 'Operador' : usuario?.rol === 'UsuFinal' ? 'Usuario' : 'Invitado'}
           </div>
         </div>
       </div>
@@ -128,11 +129,11 @@ export default function Navigation() {
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
         Agenda
-        {isInvitado && (
+        {isInvitado || isUsuFinal ? (
           <span style={{ marginLeft: 'auto', fontSize: '0.6rem', background: 'rgba(34,197,94,0.12)', color: 'var(--green)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-            único
+            reservas
           </span>
-        )}
+        ) : null}
       </Link>
 
       {/* Footer con logout */}

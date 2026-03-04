@@ -1,9 +1,11 @@
-export type Rol = 'admin' | 'operador' | 'invitado'
+export type Rol = 'admin' | 'operador' | 'invitado' | 'UsuFinal'
 
 export interface Usuario {
   id: string
   username: string
   dni: string
+  telefono: string
+  email?: string
   rol: Rol
   createdAt: string
 }
@@ -35,7 +37,7 @@ export async function getUsuarios(): Promise<Usuario[]> {
   return result || []
 }
 
-export async function saveUsuario(data: { username: string; dni: string; password: string; rol: Rol }): Promise<Usuario | { error: string; existe?: boolean; username?: string }> {
+export async function saveUsuario(data: { username: string; dni: string; password: string; telefono: string; email?: string; rol: Rol }): Promise<Usuario | { error: string; existe?: boolean; username?: string }> {
   return await fetchAPI('usuarios', 'create', data)
 }
 
