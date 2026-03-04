@@ -1,7 +1,7 @@
 # 🎾 PadelManager
 
 Sistema de gestión para canchas de pádel. Construido con **Next.js 14**, **TypeScript** y **Tailwind CSS**.
- asd
+ 
 ## Funcionalidades
 
 ### 👤 Contactos
